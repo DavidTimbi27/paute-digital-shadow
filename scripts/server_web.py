@@ -180,7 +180,11 @@ CCTV_REFERENCE = {
 }
 BARZALLO_CAM_X = CCTV_REFERENCE["anchor_3d"][0]
 BARZALLO_CAM_Z = CCTV_REFERENCE["anchor_3d"][2]
-CCTV_RESERVED_EDGES = {"1445998233"}
+CCTV_RESERVED_EDGES = {
+    edge_id
+    for route in CCTV_REFERENCE["routes"].values()
+    for edge_id in route
+}
 E40_DESVIO_X = BARZALLO_CAM_X
 E40_DESVIO_Z = BARZALLO_CAM_Z
 
@@ -192,7 +196,7 @@ class SyntheticTrafficGenerator:
     - Utiliza rutas multicarretera de paute_test.rou.xml y extiende trayectorias dinámicamente.
     """
     def __init__(self, net_json_path, net_xml_path=NET_XML_FILE, rou_xml_path=ROU_XML_FILE):
-        global CCTV_REFERENCE, BARZALLO_CAM_X, BARZALLO_CAM_Z, E40_DESVIO_X, E40_DESVIO_Z
+        global CCTV_REFERENCE, CCTV_RESERVED_EDGES, BARZALLO_CAM_X, BARZALLO_CAM_Z, E40_DESVIO_X, E40_DESVIO_Z
         self.cctv_reference = CCTV_REFERENCE
         self.vehicles = {}
         self.counter = 0
@@ -212,6 +216,11 @@ class SyntheticTrafficGenerator:
                     data = json.load(f)
                     self.cctv_reference = data.get("cctv_reference", CCTV_REFERENCE)
                     CCTV_REFERENCE = self.cctv_reference
+                    CCTV_RESERVED_EDGES = {
+                        edge_id
+                        for route in self.cctv_reference.get("routes", {}).values()
+                        for edge_id in route
+                    }
                     BARZALLO_CAM_X = self.cctv_reference["anchor_3d"][0]
                     BARZALLO_CAM_Z = self.cctv_reference["anchor_3d"][2]
                     E40_DESVIO_X, E40_DESVIO_Z = BARZALLO_CAM_X, BARZALLO_CAM_Z
@@ -431,7 +440,12 @@ class SyntheticTrafficGenerator:
             points = list(route_data["points"])
             edges = list(route_data["edges"])
             cum_dists = list(route_data["cum_dists"])
-            base_speed = cfg["nominal_speed"] * random.uniform(0.85, 1.15)
+            route_speed_limit = min(
+                (self.edges_map.get(edge_id, {}).get("speed", float("inf")) for edge_id in edges),
+                default=float("inf")
+            )
+            varied_speed = cfg["nominal_speed"] * random.uniform(0.70, 1.30)
+            base_speed = min(varied_speed, route_speed_limit * random.uniform(0.82, 0.98))
             
             # Orientación inicial calculada del primer segmento
             init_dx = points[1][0] - points[0][0] if len(points) > 1 else 1.0

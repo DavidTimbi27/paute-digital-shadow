@@ -1664,9 +1664,9 @@ body, html {
     padding: 4px;
 }
 .hud-controls.panel-collapsed {
-    left: auto;
-    right: 20px;
-    transform: none;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
     padding: 4px;
 }
 .cctv-counter-hud.panel-collapsed {
@@ -1675,6 +1675,11 @@ body, html {
     padding: 6px;
 }
 .cctv-counter-hud.panel-collapsed > :not(.counter-hud-header) {
+    display: none !important;
+}
+.cctv-counter-hud.panel-collapsed .live-tag-mini,
+.cctv-counter-hud.panel-collapsed .counter-hud-title-wrap,
+.cctv-counter-hud.panel-collapsed .cctv-btn-icon-mini {
     display: none !important;
 }
 .cctv-pip-window.panel-collapsed {
@@ -1687,6 +1692,11 @@ body, html {
 .cctv-pip-window.panel-collapsed > :not(.cctv-pip-header) {
     display: none !important;
 }
+.cctv-pip-window.panel-collapsed .cctv-live-tag,
+.cctv-pip-window.panel-collapsed .cctv-title-wrap,
+.cctv-pip-window.panel-collapsed .cctv-pip-actions > :not(.panel-collapse-toggle) {
+    display: none !important;
+}
 .nav-help.panel-collapsed {
     width: auto;
     padding: 4px;
@@ -1695,6 +1705,6 @@ body, html {
 @media (max-width: 900px) {
     .hud-header.panel-collapsed { right: 10px; }
     .hud-sidebar-left.panel-collapsed { left: 10px; }
-    .hud-controls.panel-collapsed { right: 10px; bottom: 10px; }
+    .hud-controls.panel-collapsed { left: 50%; right: auto; bottom: 10px; transform: translateX(-50%); }
 }
 

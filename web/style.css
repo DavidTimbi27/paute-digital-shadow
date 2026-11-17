@@ -1620,3 +1620,81 @@ body, html {
     margin-left: 8px;
 }
 
+/* Minimizar paneles del HUD para evitar que se tapen entre sí. */
+.panel-collapse-toggle {
+    flex: 0 0 auto;
+    min-width: 30px;
+    min-height: 28px;
+    padding: 4px 8px;
+    border: 1px solid rgba(0, 229, 255, 0.42);
+    border-radius: 7px;
+    background: rgba(0, 20, 30, 0.78);
+    color: var(--accent-cyan);
+    font: 700 0.78rem var(--font-main);
+    line-height: 1;
+    cursor: pointer;
+    pointer-events: auto;
+}
+
+.panel-collapse-toggle:hover,
+.panel-collapse-toggle:focus-visible {
+    background: rgba(0, 229, 255, 0.2);
+    outline: 2px solid rgba(0, 229, 255, 0.35);
+    outline-offset: 1px;
+}
+
+.hud-header.panel-collapsed {
+    left: auto;
+    right: 20px;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    padding: 4px;
+}
+.hud-header.panel-collapsed > :not(.panel-collapse-toggle),
+.hud-sidebar-left.panel-collapsed > :not(.panel-collapse-toggle),
+.hud-controls.panel-collapsed > :not(.panel-collapse-toggle),
+.nav-help.panel-collapsed > :not(.panel-collapse-toggle) {
+    display: none !important;
+}
+.hud-sidebar-left.panel-collapsed {
+    width: auto;
+    max-height: none;
+    overflow: visible;
+    padding: 4px;
+}
+.hud-controls.panel-collapsed {
+    left: auto;
+    right: 20px;
+    transform: none;
+    padding: 4px;
+}
+.cctv-counter-hud.panel-collapsed {
+    width: max-content;
+    max-width: calc(100vw - 32px);
+    padding: 6px;
+}
+.cctv-counter-hud.panel-collapsed > :not(.counter-hud-header) {
+    display: none !important;
+}
+.cctv-pip-window.panel-collapsed {
+    width: max-content;
+    max-width: calc(100vw - 32px);
+    height: auto;
+    min-height: 0;
+    padding: 6px;
+}
+.cctv-pip-window.panel-collapsed > :not(.cctv-pip-header) {
+    display: none !important;
+}
+.nav-help.panel-collapsed {
+    width: auto;
+    padding: 4px;
+}
+
+@media (max-width: 900px) {
+    .hud-header.panel-collapsed { right: 10px; }
+    .hud-sidebar-left.panel-collapsed { left: 10px; }
+    .hud-controls.panel-collapsed { right: 10px; bottom: 10px; }
+}
+

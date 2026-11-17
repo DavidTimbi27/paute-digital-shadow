@@ -115,6 +115,7 @@ const CCTV_LOOK_AT = new THREE.Vector3();
 
 // ─── Inicialización ────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
+    setupCollapsiblePanels();
     initScene();
     setupKeyboardFlight();
     setupRaycasting();
@@ -124,6 +125,35 @@ window.addEventListener('DOMContentLoaded', () => {
     setupVisionOverlayResize();
     animate();
 });
+
+function setupCollapsiblePanels() {
+    document.querySelectorAll('.panel-collapse-toggle[data-collapse-target]').forEach(button => {
+        const panel = document.getElementById(button.dataset.collapseTarget);
+        if (!panel) return;
+
+        const storageKey = `paute-panel-collapsed-${panel.id}`;
+        const label = button.dataset.collapseLabel || 'Panel';
+        const updateButton = collapsed => {
+            button.textContent = collapsed ? `+ ${label}` : '−';
+            button.setAttribute('aria-expanded', String(!collapsed));
+            button.title = `${collapsed ? 'Expandir' : 'Minimizar'} ${label.toLowerCase()}`;
+        };
+
+        let collapsed = false;
+        try { collapsed = localStorage.getItem(storageKey) === 'true'; } catch (_) { /* almacenamiento opcional */ }
+        panel.classList.toggle('panel-collapsed', collapsed);
+        updateButton(collapsed);
+
+        button.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            collapsed = !panel.classList.contains('panel-collapsed');
+            panel.classList.toggle('panel-collapsed', collapsed);
+            updateButton(collapsed);
+            try { localStorage.setItem(storageKey, String(collapsed)); } catch (_) { /* almacenamiento opcional */ }
+        });
+    });
+}
 
 function initScene() {
     const container = document.getElementById('canvas-container');

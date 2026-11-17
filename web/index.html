@@ -16,13 +16,13 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
     
-    <link rel="stylesheet" href="style.css?v=20261117-building-baja2">
+    <link rel="stylesheet" href="style.css?v=20261117-collapsible1">
 </head>
 <body>
     <div id="canvas-container"></div>
 
     <!-- HUD Overlay Header -->
-    <header class="hud-header glass-panel">
+    <header class="hud-header glass-panel" id="hud-header">
         <div class="brand">
             <div class="pulse-indicator live" id="connection-indicator"></div>
             <div>
@@ -56,10 +56,12 @@
                 <span class="badge-val success">keepRoute=1</span>
             </div>
         </div>
+        <button class="panel-collapse-toggle" type="button" data-collapse-target="hud-header" data-collapse-label="Panel" aria-controls="hud-header" aria-expanded="true" title="Minimizar panel superior">-</button>
     </header>
 
     <!-- Panel Lateral Izquierdo: Telemetría, Fricción y POIs -->
-    <aside class="hud-sidebar-left glass-panel">
+    <aside class="hud-sidebar-left glass-panel" id="hud-sidebar-left">
+        <button class="panel-collapse-toggle" type="button" data-collapse-target="hud-sidebar-left" data-collapse-label="Menú" aria-controls="hud-sidebar-left" aria-expanded="true" title="Minimizar menú">-</button>
         <div class="panel-section">
             <h2 class="section-title">📊 TELEMETRÍA AMBIENTAL & FLUJO</h2>
             
@@ -214,7 +216,8 @@
     </div>
 
     <!-- Panel de Navegación de Cámara (Inferior) -->
-    <nav class="hud-controls glass-panel">
+    <nav class="hud-controls glass-panel" id="hud-controls">
+        <button class="panel-collapse-toggle" type="button" data-collapse-target="hud-controls" data-collapse-label="Vistas" aria-controls="hud-controls" aria-expanded="true" title="Minimizar vistas rápidas">-</button>
         <div class="control-group">
             <span class="control-label">VISTAS RÁPIDAS:</span>
             <button class="ctrl-btn active" id="btn-cam-overview" onclick="setCameraView('overview')">🚁 Panorámica</button>
@@ -239,6 +242,7 @@
                 <span class="counter-hud-loc">E40 ∩ José Miguel Barzallo</span>
             </div>
             <button class="cctv-btn-icon-mini" onclick="expandCCTVModal(event)" title="Abrir Modo Espejo / Detalle">🔍</button>
+            <button class="panel-collapse-toggle" type="button" data-collapse-target="cctv-counter-hud" data-collapse-label="Conteo" aria-controls="cctv-counter-hud" aria-expanded="true" title="Minimizar panel de conteo">-</button>
         </div>
         <div class="counter-main-row">
             <div class="counter-kpi-main">
@@ -312,6 +316,7 @@
                 <button class="cctv-btn-icon" id="btn-cctv-fly" title="Center map on CCTV junction" onclick="flyToCCTVIntersection(event)">P</button>
                 <button class="cctv-btn-icon" id="btn-cctv-pip-mode" title="PiP dual view; click to change" onclick="cyclePipViewMode(event)">D</button>
                 <button class="cctv-btn-icon" id="btn-cctv-expand" title="Open theater view" onclick="expandCCTVModal(event)">+</button>
+                <button class="panel-collapse-toggle" type="button" data-collapse-target="cctv-pip-window" data-collapse-label="Camara" aria-controls="cctv-pip-window" aria-expanded="true" title="Minimizar ventana de camara">-</button>
             </div>
         </div>
         <div class="cctv-pip-content pip-dual" id="cctv-pip-content">
@@ -456,10 +461,11 @@
     </div>
 
     <!-- Guía de Teclado y Controles de Vuelo -->
-    <div class="nav-help glass-panel">
+    <div class="nav-help glass-panel" id="nav-help">
+        <button class="panel-collapse-toggle" type="button" data-collapse-target="nav-help" data-collapse-label="Ayuda" aria-controls="nav-help" aria-expanded="true" title="Minimizar ayuda">-</button>
         <span>🎮 <b>WASD / Flechas:</b> Desplazarse por el mapa | <b>Arrastrar Clic Izq:</b> Orbitar | <b>Clic Der:</b> Paneo | <b>Clic en Vehículo:</b> Ver Telemetría & CO₂</span>
     </div>
 
-    <script src="app.js?v=20261117-building-baja2"></script>
+    <script src="app.js?v=20261117-collapsible1"></script>
 </body>
 </html>

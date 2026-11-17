@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ===================================================================
+     paute.netccfg — Configuración de netconvert (alternativa a CLI)
+     ===================================================================
+     Este archivo puede usarse en lugar de los flags de línea de comandos:
+       netconvert -c paute.netccfg
+     =================================================================== -->
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <!-- ═══ ENTRADA ═══ -->
+    <input>
+        <osm-files value="../data/paute.osm"/>
+    </input>
+
+    <!-- ═══ SALIDA ═══ -->
+    <output>
+        <output-file value="../net/paute.net.xml"/>
+        <output.street-names value="true"/>
+        <output.original-names value="true"/>
+    </output>
+
+    <!-- ═══ PROCESAMIENTO ═══ -->
+    <processing>
+        <geometry.remove value="true"/>
+        <roundabouts.guess value="true"/>
+        <ramps.guess value="true"/>
+        <junctions.join value="true"/>
+        <junctions.join-dist value="15"/>
+        <junctions.corner-detail value="5"/>
+        <junctions.internal-link-detail value="4"/>
+        <edges.join value="true"/>
+        <no-turnarounds.tls value="true"/>
+        <offset.disable-normalization value="true"/>
+        <lefthand value="false"/>
+    </processing>
+
+    <!-- ═══ SEMÁFOROS ═══ -->
+    <tls_building>
+        <tls.guess-signals value="true"/>
+        <tls.discard-simple value="true"/>
+        <tls.join value="true"/>
+        <tls.default-type value="actuated"/>
+        <tls.green.time value="31"/>
+    </tls_building>
+
+    <!-- ═══ FILTRADO DE ARISTAS ═══ -->
+    <edge_removal>
+        <remove-edges.isolated value="true"/>
+        <keep-edges.by-vclass value="passenger,bus,truck"/>
+    </edge_removal>
+
+    <!-- ═══ VALORES POR DEFECTO ═══ -->
+    <building_defaults>
+        <default.lanewidth value="3.2"/>
+        <default.speed value="13.89"/>
+    </building_defaults>
+
+    <!-- ═══ PROYECCIÓN ═══ -->
+    <projection>
+        <proj.utm value="true"/>
+    </projection>
+
+    <!-- ═══ FORMATO ═══ -->
+    <formats>
+        <osm.sidewalks value="false"/>
+        <osm.crossings value="false"/>
+    </formats>
+
+</configuration>

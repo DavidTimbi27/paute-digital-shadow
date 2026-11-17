@@ -1,0 +1,52 @@
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="../net/paute.net.xml"/>
+        <additional-files value="vtypes.add.xml"/>
+    </input>
+
+    <time>
+        <begin value="0"/>
+        <end value="7200"/>
+        <step-length value="0.1"/>
+    </time>
+
+    <processing>
+        <step-method.ballistic value="true"/>
+        <max-depart-delay value="3600"/>
+        <random value="false"/>
+        <seed value="42"/>
+        <collision.action value="warn"/>
+        <collision.check-junctions value="true"/>
+        <lateral-resolution value="0.8"/>
+        <!-- Eliminar teleportings completamente: -1 desactiva la teletransportación por bloqueo -->
+        <time-to-teleport value="-1"/>
+    </processing>
+
+    <output>
+        <summary-output value="../output/summary.xml"/>
+        <fcd-output value="../output/fcd.xml"/>
+        <fcd-output.geo value="true"/>
+        <emission-output value="../output/emissions.xml"/>
+        <tripinfo-output value="../output/tripinfo.xml"/>
+        <statistic-output value="../output/statistics.xml"/>
+    </output>
+
+    <gui_only>
+        <gui-settings-file value="view3d.xml"/>
+        <start value="false"/>
+        <quit-on-end value="false"/>
+    </gui_only>
+
+    <traci_server>
+        <remote-port value="8813"/>
+    </traci_server>
+
+    <report>
+        <verbose value="true"/>
+        <no-step-log value="false"/>
+        <log value="../output/sumo.log"/>
+    </report>
+
+</configuration>

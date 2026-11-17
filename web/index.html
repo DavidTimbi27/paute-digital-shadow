@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sombra Digital 3D — Paute, Azuay | Gemelo Digital Urbano & Emisiones CO2</title>
+    <meta name="description" content="Gemelo digital 3D interactivo para monitoreo de tráfico, parque automotor, puntos de interés y emisiones de CO2 en Paute, Azuay con SUMO y TraCI.">
+    
+    <!-- Tipografías Premium Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Three.js + Controles + Tween -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+    
+    <link rel="stylesheet" href="style.css?v=20261117-building-baja2">
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <!-- HUD Overlay Header -->
+    <header class="hud-header glass-panel">
+        <div class="brand">
+            <div class="pulse-indicator live" id="connection-indicator"></div>
+            <div>
+                <h1 class="brand-title">PAUTE DIGITAL TWIN 3D</h1>
+                <p class="brand-subtitle">SOMBRA DIGITAL URBANA • AZUAY • SUMO & TRACI</p>
+            </div>
+        </div>
+
+        <!-- Ciclo Horario / Tiempos del Día -->
+        <div class="time-of-day-selector">
+            <span class="selector-label">TIEMPO DEL DÍA:</span>
+            <div class="time-buttons">
+                <button class="time-btn" onclick="setTimeOfDay('dawn')" title="Amanecer Andino 06:30">🌅 Alba</button>
+                <button class="time-btn" onclick="setTimeOfDay('day')" title="Mediodía Soleado 12:00">☀️ Día</button>
+                <button class="time-btn" onclick="setTimeOfDay('dusk')" title="Atardecer Azuayo 18:00">🌇 Ocaso</button>
+                <button class="time-btn active" id="btn-night" onclick="setTimeOfDay('night')" title="Noche Cyberpunk 21:30">🌃 Noche</button>
+            </div>
+        </div>
+
+        <div class="telemetry-badges">
+            <div class="badge">
+                <span class="badge-label">EMISIONES CO₂</span>
+                <span class="badge-val accent" id="kpi-co2-rate">0.0 <small>kg/h</small></span>
+            </div>
+            <div class="badge">
+                <span class="badge-label">TELEPORTS</span>
+                <span class="badge-val success" id="kpi-teleport">0 (Evitados)</span>
+            </div>
+            <div class="badge">
+                <span class="badge-label">CONFINAMIENTO</span>
+                <span class="badge-val success">keepRoute=1</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Panel Lateral Izquierdo: Telemetría, Fricción y POIs -->
+    <aside class="hud-sidebar-left glass-panel">
+        <div class="panel-section">
+            <h2 class="section-title">📊 TELEMETRÍA AMBIENTAL & FLUJO</h2>
+            
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <span class="kpi-label">Vehículos Activos</span>
+                    <span class="kpi-value" id="kpi-active">0</span>
+                    <span class="kpi-sub">Red vial consolidada</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">Velocidad Media</span>
+                    <span class="kpi-value" id="kpi-speed">0.0 <small>km/h</small></span>
+                    <span class="kpi-sub">Promedio cantonal</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">CO₂ Acumulado</span>
+                    <span class="kpi-value" id="kpi-co2-accum">0.0 <small>kg</small></span>
+                    <span class="kpi-sub">Modelo HBEFA3</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">Fricción Mercado</span>
+                    <span class="kpi-value warning" id="kpi-market-status">Moderada</span>
+                    <span class="kpi-sub" id="kpi-market-count">0 vehículos en radio</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Capas de Polígonos y Visualización -->
+        <div class="panel-section">
+            <h2 class="section-title">🏢 CAPAS & POLÍGONOS 3D</h2>
+            <div class="layers-grid">
+                <label class="layer-toggle">
+                    <input type="checkbox" id="toggle-buildings" checked onchange="toggleLayer('buildings')">
+                    <span class="toggle-slider"></span>
+                    <span class="layer-name">Edificios 3D (Manzanas)</span>
+                </label>
+                <label class="layer-toggle">
+                    <input type="checkbox" id="toggle-pois" checked onchange="toggleLayer('pois')">
+                    <span class="toggle-slider"></span>
+                    <span class="layer-name">Puntos de Interés (POIs)</span>
+                </label>
+                <label class="layer-toggle">
+                    <input type="checkbox" id="toggle-streetlights" checked onchange="toggleLayer('streetlights')">
+                    <span class="toggle-slider"></span>
+                    <span class="layer-name">Alumbrado Público</span>
+                </label>
+                <label class="layer-toggle">
+                    <input type="checkbox" id="toggle-trails" checked onchange="toggleLayer('trails')">
+                    <span class="toggle-slider"></span>
+                    <span class="layer-name">Estelas de Luz (Trails)</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Puntos de Interés de Paute (Navegables con Clic) -->
+        <div class="panel-section">
+            <h2 class="section-title">📍 PUNTOS DE INTERÉS (POIs PAUTE)</h2>
+            <div class="pois-list" id="pois-container">
+                <!-- Se poblará dinámicamente desde paute_network_3d.json -->
+            </div>
+        </div>
+
+        <!-- Parque Automotor de Paute -->
+        <div class="panel-section">
+            <h2 class="section-title">🚗 PARQUE AUTOMOTOR CANTONAL</h2>
+            <div class="fleet-list">
+                <div class="fleet-item">
+                    <span class="fleet-icon moto">🏍️</span>
+                    <div class="fleet-info">
+                        <span class="fleet-name">Motocicletas 150cc</span>
+                        <span class="fleet-desc">Gasolina • 18% del parque • ~42 g CO₂/km</span>
+                    </div>
+                </div>
+                <div class="fleet-item">
+                    <span class="fleet-icon car">🚗</span>
+                    <div class="fleet-info">
+                        <span class="fleet-name">Sedanes y Taxis</span>
+                        <span class="fleet-desc">Gasolina • 44% del parque • ~138 g CO₂/km</span>
+                    </div>
+                </div>
+                <div class="fleet-item">
+                    <span class="fleet-icon pickup">🛻</span>
+                    <div class="fleet-info">
+                        <span class="fleet-name">Camionetas D-Max/Hilux</span>
+                        <span class="fleet-desc">Diésel • 22% del parque • ~182 g CO₂/km</span>
+                    </div>
+                </div>
+                <div class="fleet-item">
+                    <span class="fleet-icon bus">🚌</span>
+                    <div class="fleet-info">
+                        <span class="fleet-name">Autobuses Urbanos/Inter.</span>
+                        <span class="fleet-desc">Diésel • 6% del parque • ~590 g CO₂/km</span>
+                    </div>
+                </div>
+                <div class="fleet-item">
+                    <span class="fleet-icon truck">🚛</span>
+                    <div class="fleet-info">
+                        <span class="fleet-name">Camiones Abasto Mercado</span>
+                        <span class="fleet-desc">Diésel • 7% del parque • ~460 g CO₂/km</span>
+                    </div>
+                </div>
+                <div class="fleet-item">
+                    <span class="fleet-icon trailer">🚚</span>
+                    <div class="fleet-info">
+                        <span class="fleet-name">Tráileres Corredor E40</span>
+                        <span class="fleet-desc">Diésel • 3% del parque • ~860 g CO₂/km</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Ficha Inspector de Vehículo (Click en Vehículo o Modo Persecución) -->
+    <div class="vehicle-inspector glass-panel" id="vehicle-inspector" style="display: none;">
+        <div class="inspector-header">
+            <div class="v-badge-type" id="insp-type-badge">SEDÁN</div>
+            <button class="btn-close-inspector" onclick="closeInspector()">✕</button>
+        </div>
+        <h3 class="insp-title" id="insp-name">Chevrolet Sail / Taxi</h3>
+        <span class="insp-id" id="insp-id">PAUTE-0042</span>
+
+        <div class="insp-grid">
+            <div class="insp-item">
+                <span class="insp-lbl">Combustible</span>
+                <span class="insp-val" id="insp-fuel">Gasolina Extra</span>
+            </div>
+            <div class="insp-item">
+                <span class="insp-lbl">Velocidad</span>
+                <span class="insp-val highlight" id="insp-speed">0.0 km/h</span>
+            </div>
+            <div class="insp-item">
+                <span class="insp-lbl">Emisión CO₂</span>
+                <span class="insp-val warning" id="insp-co2">0.0 g/s</span>
+            </div>
+            <div class="insp-item">
+                <span class="insp-lbl">Consumo Est.</span>
+                <span class="insp-val" id="insp-cons">7.4 l/100km</span>
+            </div>
+            <div class="insp-item">
+                <span class="insp-lbl">CO₂ Acumulado</span>
+                <span class="insp-val" id="insp-co2-accum">0.0 g</span>
+            </div>
+            <div class="insp-item">
+                <span class="insp-lbl">Rumbo (Heading)</span>
+                <span class="insp-val" id="insp-heading">0°</span>
+            </div>
+        </div>
+
+        <div class="insp-footer">
+            <button class="btn-follow" id="btn-insp-follow" onclick="followInspectedVehicle()">🎥 Seguir con Cámara</button>
+        </div>
+    </div>
+
+    <!-- Panel de Navegación de Cámara (Inferior) -->
+    <nav class="hud-controls glass-panel">
+        <div class="control-group">
+            <span class="control-label">VISTAS RÁPIDAS:</span>
+            <button class="ctrl-btn active" id="btn-cam-overview" onclick="setCameraView('overview')">🚁 Panorámica</button>
+            <button class="ctrl-btn" id="btn-cam-market" onclick="setCameraView('market')">🛒 Mercado 26F</button>
+            <button class="ctrl-btn" id="btn-cam-hospital" onclick="setCameraView('hospital')">🏥 Hospital</button>
+            <button class="ctrl-btn" id="btn-cam-terminal" onclick="setCameraView('terminal')">🚌 Terminal</button>
+            <button class="ctrl-btn" id="btn-cam-e40" onclick="setCameraView('e40')">📍 Desvío E40</button>
+            <button class="ctrl-btn" id="btn-cam-cctv" onclick="setCameraView('cctv')">📹 Cámara Barzallo</button>
+            <button class="ctrl-btn" id="btn-cam-follow" onclick="toggleFollowMode()">🚗 Persecución</button>
+        </div>
+    </nav>
+
+    <!-- Panel Flotante de Conteo y Clasificación Vehicular en Tiempo Real (YOLOv11 CCTV) -->
+    <div class="cctv-counter-hud glass-panel" id="cctv-counter-hud">
+        <div class="counter-hud-header">
+            <div class="live-tag-mini">
+                <span class="live-dot pulse"></span>
+                <span class="live-txt">YOLOv11 CCTV</span>
+            </div>
+            <div class="counter-hud-title-wrap">
+                <span class="counter-hud-title">CONTEO VEHICULAR EN VIVO</span>
+                <span class="counter-hud-loc">E40 ∩ José Miguel Barzallo</span>
+            </div>
+            <button class="cctv-btn-icon-mini" onclick="expandCCTVModal(event)" title="Abrir Modo Espejo / Detalle">🔍</button>
+        </div>
+        <div class="counter-main-row">
+            <div class="counter-kpi-main">
+                <span class="kpi-num" id="cnt-total">0</span>
+                <span class="kpi-tag">TOTAL VEHÍCULOS</span>
+            </div>
+            <div class="counter-flow-rate">
+                <span class="flow-num" id="cnt-flow">0.0</span>
+                <span class="flow-tag">veh / min</span>
+            </div>
+            <div class="counter-co2-box">
+                <span class="co2-num" id="cnt-co2">0.000</span>
+                <span class="co2-tag">kg CO₂ estimado (HBEFA3)</span>
+            </div>
+        </div>
+        <div class="direction-counts-row">
+            <div class="dir-badge sube">
+                <span class="dir-icon">↗</span>
+                <span class="dir-label">SUBE (Mercado):</span>
+                <span class="dir-val" id="cnt-sube">0</span>
+            </div>
+            <div class="dir-badge baja">
+                <span class="dir-icon">↙</span>
+                <span class="dir-label">BAJA (E40):</span>
+                <span class="dir-val" id="cnt-baja">0</span>
+            </div>
+        </div>
+        <div class="classes-grid">
+            <div class="class-item" title="Motocicletas 150cc">
+                <span class="c-icon">🏍️</span>
+                <span class="c-label">Motos</span>
+                <span class="c-val" id="cnt-motos">0</span>
+            </div>
+            <div class="class-item" title="Sedanes y Taxis">
+                <span class="c-icon">🚗</span>
+                <span class="c-label">Sedanes</span>
+                <span class="c-val" id="cnt-sedanes">0</span>
+            </div>
+            <div class="class-item" title="Camionetas D-Max/Hilux">
+                <span class="c-icon">🛻</span>
+                <span class="c-label">Camionetas</span>
+                <span class="c-val" id="cnt-camionetas">0</span>
+            </div>
+            <div class="class-item" title="Autobuses Urbanos/Inter.">
+                <span class="c-icon">🚌</span>
+                <span class="c-label">Buses</span>
+                <span class="c-val" id="cnt-buses">0</span>
+            </div>
+            <div class="class-item" title="Camiones de Abasto">
+                <span class="c-icon">🚛</span>
+                <span class="c-label">Camiones</span>
+                <span class="c-val" id="cnt-camiones">0</span>
+            </div>
+            <div class="class-item" title="Tráileres Corredor E40">
+                <span class="c-icon">🚚</span>
+                <span class="c-label">Tráileres</span>
+                <span class="c-val" id="cnt-trailers">0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compact PiP: physical camera and the CCTV lens view share the same master reference. -->
+    <div class="cctv-pip-window glass-panel" id="cctv-pip-window" onclick="handleCCTVPipClick(event)" title="Click to expand CCTV monitor">
+        <div class="cctv-pip-header">
+            <div class="cctv-live-tag"><span class="live-dot pulse"></span><span class="live-text">LIVE</span></div>
+            <div class="cctv-title-wrap">
+                <span class="cctv-pip-title">CAMARA VIAL E40</span>
+                <span class="cctv-pip-sub">Av. Interoceanica (E40)</span>
+            </div>
+            <div class="cctv-pip-actions">
+                <button class="cctv-btn-icon" id="btn-cctv-fly" title="Center map on CCTV junction" onclick="flyToCCTVIntersection(event)">P</button>
+                <button class="cctv-btn-icon" id="btn-cctv-pip-mode" title="PiP dual view; click to change" onclick="cyclePipViewMode(event)">D</button>
+                <button class="cctv-btn-icon" id="btn-cctv-expand" title="Open theater view" onclick="expandCCTVModal(event)">+</button>
+            </div>
+        </div>
+        <div class="cctv-pip-content pip-dual" id="cctv-pip-content">
+            <div class="cctv-pip-pane cctv-pip-physical-pane" id="cctv-pip-physical-pane">
+                <div class="cctv-video-wrapper">
+                    <video id="cctv-video" autoplay playsinline muted></video>
+                    <canvas id="cctv-fallback-canvas" class="cctv-fallback-canvas"></canvas>
+                    <canvas id="cctv-pip-preview" class="cctv-pip-preview"></canvas>
+                    <canvas id="cctv-yolo-canvas" class="cctv-yolo-overlay"></canvas>
+                    <div class="cctv-pip-overlay">
+                        <span class="cctv-badge-loc">SUBE / BAJA E40</span>
+                        <span class="cctv-badge-hint" id="pip-flow-badge">SUBE 0 | BAJA 0 | TOTAL 0</span>
+                    </div>
+                    <div class="cctv-prompt-overlay" id="cctv-prompt-overlay" onclick="requestWebcamAccess()">
+                        <span class="prompt-icon">CAM</span>
+                        <button class="cctv-start-btn" onclick="requestWebcamAccess()">CONNECT USB CAMERA</button>
+                        <span class="prompt-sub">Click to start live video</span>
+                    </div>
+                </div>
+            </div>
+            <div class="cctv-pip-pane cctv-pip-twin-pane" id="cctv-pip-twin-pane">
+                <canvas id="cctv-pip-twin-canvas" class="cctv-pip-twin-canvas"></canvas>
+                <span class="cctv-pip-twin-label">3D E40 CCTV LENS</span>
+                <div class="cctv-twin-view-controls" aria-label="Controles de vista del gemelo">
+                    <button type="button" title="Alejar gemelo" onclick="zoomCCTVTwin(1.2, event)">−</button>
+                    <button type="button" title="Acercar gemelo" onclick="zoomCCTVTwin(0.83, event)">+</button>
+                    <button type="button" class="twin-reset" title="Restablecer vista" onclick="resetCCTVTwinView(true, event)">↺</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pantalla Agrandada para Visualización Detallada y Modo Espejo / Gemelo Fidedigno -->
+    <div class="cctv-modal-backdrop" id="cctv-modal-backdrop" onclick="closeCCTVModal(event)">
+        <div class="cctv-modal-card glass-panel" id="cctv-modal-card" onclick="event.stopPropagation()">
+            <div class="cctv-modal-header">
+                <div class="cctv-modal-brand">
+                    <div class="cctv-live-tag large">
+                        <span class="live-dot pulse"></span>
+                        <span class="live-text">DIGITAL SHADOW • TIEMPO REAL</span>
+                    </div>
+                    <div>
+                        <h2 class="cctv-modal-title">CÁMARA VIAL & GEMELO FIDEDIGNO: AV. INTEROCEÁNICA ∩ JOSÉ MIGUEL BARZALLO</h2>
+                        <p class="cctv-modal-subtitle">SOMBRA DIGITAL DE PAUTE • AZUAY • YOLOv11 TRACKING POR CENTROIDES & HBEFA3</p>
+                    </div>
+                </div>
+                <div class="cctv-modal-controls">
+                    <div class="cctv-device-select-wrap">
+                        <label for="cctv-device-select">Dispositivo USB:</label>
+                        <select id="cctv-device-select" onchange="switchCameraDevice(this.value)">
+                            <option value="">Detectando cámara...</option>
+                        </select>
+                    </div>
+                    <button class="cctv-modal-btn" id="btn-toggle-mirror-mode" onclick="toggleMirrorDualLayout()" title="Alternar Vista Dividida o Simple">🌓 Modo Espejo Dual</button>
+                    <button class="cctv-modal-btn" onclick="toggleFullScreenCamera()" title="Pantalla completa del monitor">🖥️ Pantalla Completa</button>
+                    <button class="cctv-modal-btn btn-close-modal" onclick="closeCCTVModal(event)" title="Reducir / Volver a ventana pequeña">🗕 Reducir (ESC)</button>
+                </div>
+            </div>
+
+            <div class="cctv-modal-body" id="cctv-modal-body">
+                <!-- PANEL IZQUIERDO: CÁMARA FÍSICA USB EN VIVO CON OVERLAY YOLOv11 -->
+                <div class="cctv-split-pane pane-left" id="cctv-pane-physical">
+                    <div class="pane-header-strip">
+                        <span class="pane-tag live"><span class="live-dot pulse"></span> TRANSMISIÓN FÍSICA USB (EN VIVO)</span>
+                        <span class="pane-tag hud" id="cctv-hud-fps">30 FPS • YOLOv11 CPU</span>
+                    </div>
+                    <div class="cctv-main-video-container" id="cctv-main-video-container">
+                        <video id="cctv-modal-video" autoplay playsinline muted></video>
+                        <canvas id="cctv-modal-canvas" class="cctv-fallback-canvas"></canvas>
+                        <canvas id="cctv-modal-yolo-canvas" class="cctv-yolo-overlay"></canvas>
+                        
+                        <!-- Overlay de Líneas Virtuales de Conteo A y B -->
+                        <div class="lines-label-overlay">
+                            <span class="line-label line-a-lbl">SUBE (derecha a izquierda)</span>
+                            <span class="line-label line-b-lbl">BAJA (izquierda a derecha)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PANEL DERECHO: GEMELO FIDEDIGNO 3D (MISMA PERSPECTIVA EXACTA) -->
+                <div class="cctv-split-pane pane-right" id="cctv-pane-twin">
+                    <div class="pane-header-strip">
+                        <span class="pane-tag twin">💎 GEMELO FIDEDIGNO 3D • MISMA PERSPECTIVA</span>
+                        <span class="pane-tag hud">CCTV VIRTUAL LENS 48°</span>
+                    </div>
+                    <div class="cctv-twin-container" id="cctv-twin-container">
+                        <canvas id="cctv-twin-canvas" class="cctv-twin-canvas"></canvas>
+                        <div class="cctv-twin-view-controls" aria-label="Controles de vista del gemelo">
+                            <button type="button" title="Alejar gemelo" onclick="zoomCCTVTwin(1.2, event)">−</button>
+                            <button type="button" title="Acercar gemelo" onclick="zoomCCTVTwin(0.83, event)">+</button>
+                            <button type="button" class="twin-reset" title="Restablecer vista" onclick="resetCCTVTwinView(true, event)">↺</button>
+                        </div>
+                        <div class="twin-watermark">
+                            <span class="wm-title">RÉPLICA VIRTUAL SINCRONIZADA</span>
+                            <span class="wm-sub">Vista longitudinal sobre Av. Interoceanica (E40)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BARRA DE TELEMETRÍA, CONTEO Y BOTONES DE PRUEBA DE INYECCIÓN -->
+            <div class="cctv-modal-stats-bar">
+                <div class="cctv-counter-deck">
+                    <div class="stat-deck-item">
+                        <span class="deck-lbl">Total Detectados:</span>
+                        <span class="deck-val highlight" id="modal-cnt-total">0</span>
+                    </div>
+                    <div class="stat-deck-item">
+                        <span class="deck-lbl">Flujo Estimado:</span>
+                        <span class="deck-val" id="modal-cnt-flow">0.0 veh/min</span>
+                    </div>
+                    <div class="stat-deck-item">
+                        <span class="deck-lbl">Sentido ↗ SUBE:</span>
+                        <span class="deck-val success" id="modal-cnt-sube">0</span>
+                    </div>
+                    <div class="stat-deck-item">
+                        <span class="deck-lbl">Sentido ↙ BAJA:</span>
+                        <span class="deck-val info" id="modal-cnt-baja">0</span>
+                    </div>
+                    <div class="stat-deck-item">
+                        <span class="deck-lbl">CO₂ Detectado:</span>
+                        <span class="deck-val warning" id="modal-cnt-co2">0.000 kg</span>
+                    </div>
+                </div>
+                <div class="cctv-modal-class-grid" aria-label="Conteo por tipo de vehiculo">
+                    <div><span>Motos</span><b id="modal-cnt-motos">0</b></div>
+                    <div><span>Sedanes</span><b id="modal-cnt-sedanes">0</b></div>
+                    <div><span>Camionetas</span><b id="modal-cnt-camionetas">0</b></div>
+                    <div><span>Buses</span><b id="modal-cnt-buses">0</b></div>
+                    <div><span>Camiones</span><b id="modal-cnt-camiones">0</b></div>
+                    <div><span>Trailers</span><b id="modal-cnt-trailers">0</b></div>
+                </div>
+
+                
+            </div>
+
+            <div class="cctv-modal-footer">
+                <span class="cctv-footer-info">Cada vehiculo detectado en la Av. Interoceanica E40 genera una entidad 3D sobre la trayectoria real de esa via, con velocidad y calculo de emisiones HBEFA3.</span>
+                <button class="ctrl-btn active" onclick="flyToCCTVIntersection()">📍 Centrar Mapa en esta Esquina</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Guía de Teclado y Controles de Vuelo -->
+    <div class="nav-help glass-panel">
+        <span>🎮 <b>WASD / Flechas:</b> Desplazarse por el mapa | <b>Arrastrar Clic Izq:</b> Orbitar | <b>Clic Der:</b> Paneo | <b>Clic en Vehículo:</b> Ver Telemetría & CO₂</span>
+    </div>
+
+    <script src="app.js?v=20261117-building-baja2"></script>
+</body>
+</html>

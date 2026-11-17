@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ===================================================================
+     view3d.xml — Configuración de Vista 3D (OSG) para SUMO-GUI
+     ===================================================================
+     Define los parámetros de visualización para el visor OpenSceneGraph:
+       • Iluminación solar direccional
+       • Color de fondo (cielo andino)
+       • Plano de suelo en Z=0
+       • Posición inicial de cámara centrada en nodos de fricción
+     =================================================================== -->
+<viewsettings>
+
+    <!-- ═══ Esquema de visualización base ═══ -->
+    <scheme name="Sombra Digital Paute">
+        <opengl 
+            dither="true"
+            fps="60"
+            drawBoundaries="true" />
+    </scheme>
+
+    <!-- ═══ Fuente de luz principal (sol) ═══ -->
+    <!-- Posición sobre el centroide de la red -->
+    <light index="0" 
+           centerX="500.0" 
+           centerY="500.0" 
+           centerZ="300.0" />
+
+    <!-- ═══ Iluminación secundaria (relleno) ═══ -->
+    <light index="1" 
+           centerX="-200.0" 
+           centerY="800.0" 
+           centerZ="150.0" />
+
+    <!-- ═══ Color de fondo — Gradiente cielo andino ═══ -->
+    <background 
+        backgroundColor="40,60,100"
+        showGrid="false" />
+
+    <!-- ═══ Plano de suelo como decal (Z=0) ═══ -->
+    <!-- Textura de terreno a nivel del suelo, elevación constante -->
+    <decal file="ground_plane.png" 
+           centerX="500.0" 
+           centerY="500.0" 
+           centerZ="0.0" 
+           width="2000.0" 
+           height="2000.0" 
+           rotation="0.0" 
+           tilt="0.0" 
+           roll="0.0" />
+
+    <!-- ═══ Vista inicial de cámara ═══ -->
+    <!-- Centrada entre los dos nodos de fricción -->
+    <viewport 
+        x="500.0" 
+        y="500.0" 
+        zoom="400" />
+
+    <!-- ═══ Delay de simulación (ms entre pasos) ═══ -->
+    <delay value="50" />
+
+</viewsettings>

@@ -58,9 +58,18 @@ NET_XML_FILE = os.path.join(PROJECT_DIR, "net", "paute.net.xml")
 ROU_XML_FILE = os.path.join(PROJECT_DIR, "net", "paute_test.rou.xml")
 
 sumo_home = os.environ.get("SUMO_HOME", "/usr/share/sumo")
+if os.name == "nt" and not os.path.isdir(sumo_home):
+    # Windows web backend can reuse the SUMO tools shipped in the local Ubuntu WSL distro.
+    for wsl_sumo_home in (
+        r"\\wsl.localhost\Ubuntu\usr\share\sumo",
+        r"\\wsl$\Ubuntu\usr\share\sumo",
+    ):
+        if os.path.isdir(wsl_sumo_home):
+            sumo_home = wsl_sumo_home
+            break
 os.environ["SUMO_HOME"] = sumo_home
 tools_dir = os.path.join(sumo_home, "tools")
-if tools_dir not in sys.path:
+if os.path.isdir(tools_dir) and tools_dir not in sys.path:
     sys.path.insert(0, tools_dir)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")

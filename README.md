@@ -23,17 +23,23 @@ py -3.14 -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
-Descargue un peso Ultralytics compatible con YOLOv11 (`yolo11n.pt`) y colóquelo en la raíz. Los pesos se excluyen del control de versiones: el usuario debe verificar y aceptar su licencia por separado. Inicie:
+Descargue un peso Ultralytics compatible con YOLOv11 (`yolo11n.pt`) y colóquelo en la raíz. Los pesos se excluyen del control de versiones: el usuario debe verificar y aceptar su licencia por separado.
+
+En una primera terminal PowerShell, genere la demanda sin tráfico sintético sobre el bloque reservado a la cámara y abra SUMO-GUI mediante WSLg:
+
+```powershell
+python scripts/filter_sumo_routes.py
+$projectInWsl = (wsl.exe -d Ubuntu -- wslpath -a "$PWD").Trim()
+wsl.exe -d Ubuntu -- bash -lc "cd '$projectInWsl' && sumo-gui -c config/paute.sumocfg --start --delay 100"
+```
+
+Luego, en otra terminal PowerShell, inicie el servidor web:
 
 ```powershell
 python scripts/server_web.py
 ```
 
-Abra `http://localhost:8085` y permita el acceso a la cámara USB. El sitio puede servirse en la red local; el acceso a cámara desde otros equipos normalmente requiere HTTPS o `localhost`. SUMO/TraCI es opcional para la visualización web y usa el puerto 8813 cuando está disponible. La simulación SUMO base se inicia con:
-
-```powershell
-sumo-gui -c config/paute.sumocfg
-```
+Abra `http://localhost:8085` y permita el acceso a la cámara USB. El sitio puede servirse en la red local; el acceso a cámara desde otros equipos normalmente requiere HTTPS o `localhost`. SUMO/TraCI usa el puerto 8813. En Windows, el backend detecta las herramientas SUMO en Ubuntu WSL para cargar TraCI.
 
 ## Regeneración y configuración
 

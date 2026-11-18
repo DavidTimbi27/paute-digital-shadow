@@ -51,20 +51,6 @@ La configuración del escenario documenta semilla SUMO 42 y paso de 0.1 s. El no
 
 Antes de regenerar una ejecución comparable, registre `python --version`, `sumo --version`, `python -m pip freeze`, los parámetros, la fecha, la semilla y la fuente de los videos. La salida grande de SUMO y los pesos no se versionan.
 
-## Informe y presentación
-
-Desde la carpeta `docs/`, compile `propuesta.tex`, `informe.tex` y `presentacion.tex` con una distribución LaTeX que incluya IEEEtran y Beamer. Para el informe, ejecute LaTeX, BibTeX y LaTeX dos veces. Las imágenes son regenerables desde la red exportada con `python scripts/build_report_assets.py` (ejecutado desde la raíz del repositorio).
-
-## Validación responsable
-
-La rúbrica requiere comparar con anotaciones independientes emparejadas por vehículo/tiempo y reportar el denominador de cada métrica. Este repositorio aún no contiene esas anotaciones. Por tanto, no se publican valores de precisión, recall, exactitud de clase, error espacial o retraso como resultados medidos. Use `docs/validation/annotations_template.csv` para preparar una muestra anonimizada y documente cámara, intervalo, reglas de anotación y desacuerdos antes de calcular métricas.
-
-El informe identifica además como trabajo pendiente la reproducción acelerada offline con pausa/búsqueda y una matriz OD de salidas validada por brazo. No confundir tráfico sintético de SUMO con conteos reales.
-
-## Repositorio GitHub
-
-Este directorio puede versionarse con Git. Excluye `.venv`, pesos YOLO y resultados voluminosos de SUMO. Revise las licencias de OpenStreetMap, SUMO y los pesos antes de publicar. La publicación en el perfil `DavidTimbi27` requiere conectar GitHub en esta sesión; no se debe incluir video de cámara ni datos personales sin autorización.
-
 ## Estructura
 
 ```text

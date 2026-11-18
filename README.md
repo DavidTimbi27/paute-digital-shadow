@@ -39,7 +39,7 @@ Luego, en otra terminal PowerShell, inicie el servidor web:
 python scripts/server_web.py
 ```
 
-Abra `http://localhost:8085` y permita el acceso a la cámara USB. El sitio puede servirse en la red local; el acceso a cámara desde otros equipos normalmente requiere HTTPS o `localhost`. SUMO/TraCI usa el puerto 8813. En Windows, el backend detecta las herramientas SUMO en Ubuntu WSL para cargar TraCI.
+Abra `http://localhost:8085` y permita el acceso a la cámara USB. El sitio puede servirse en la red local; el acceso a cámara desde otros equipos normalmente requiere HTTPS o `localhost`. SUMO/TraCI usa el puerto 8813 cuando las herramientas TraCI están instaladas en el mismo entorno de Python y el backend puede alcanzar el puerto. La interfaz WSLg puede mostrar SUMO de forma independiente.
 
 ## Regeneración y configuración
 

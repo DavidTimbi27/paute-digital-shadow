@@ -13,6 +13,7 @@ Sombra Digital de Paute, Azuay
 import os
 import sys
 import importlib.util
+import ipaddress
 import json
 import asyncio
 import logging
@@ -27,6 +28,11 @@ import tempfile
 import xml.etree.ElementTree as ET
 from PIL import Image
 from collections import deque
+
+try:
+    import cv2
+except Exception:
+    cv2 = None
 
 try:
     HAS_BYTETRACK = importlib.util.find_spec("lap") is not None
@@ -68,6 +74,70 @@ logger = logging.getLogger("WebBridge")
 
 connected_websockets = set()
 traci_client = None
+
+class RTSPCamera:
+    """OpenCV RTSP reader; credentials are kept in memory and never returned by the API."""
+    def __init__(self):
+        self.url = ""
+        self.lock = threading.Lock()
+        self.frame = None
+        self.running = False
+        self.thread = None
+        self.reconfigure_event = threading.Event()
+
+    def configure(self, ip, username, password):
+        from urllib.parse import quote
+        safe_user = quote(username.strip(), safe="")
+        safe_password = quote(password, safe="")
+        self.url = f"rtsp://{safe_user}:{safe_password}@{ip.strip()}:554/H.264"
+        with self.lock:
+            self.frame = None
+        self.reconfigure_event.set()
+        return self.start()
+
+    def start(self):
+        if not self.url or cv2 is None:
+            return False
+        if self.thread and self.thread.is_alive():
+            return True
+        self.running = True
+        self.thread = threading.Thread(target=self._read, daemon=True, name="ezviz-rtsp")
+        self.thread.start()
+        return True
+
+    def _read(self):
+        while self.running:
+            self.reconfigure_event.clear()
+            url = self.url
+            if not url:
+                time.sleep(0.25)
+                continue
+            cap = cv2.VideoCapture(url, cv2.CAP_FFMPEG)
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            if not cap.isOpened():
+                if self.reconfigure_event.is_set():
+                    continue
+                time.sleep(3)
+                continue
+            while self.running and not self.reconfigure_event.is_set():
+                ok, frame = cap.read()
+                if not ok:
+                    break
+                with self.lock:
+                    self.frame = frame
+            cap.release()
+            if not self.reconfigure_event.is_set():
+                time.sleep(1)
+
+    def jpeg(self):
+        with self.lock:
+            frame = None if self.frame is None else self.frame.copy()
+        if frame is None:
+            return None
+        ok, encoded = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+        return encoded.tobytes() if ok else None
+
+rtsp_camera = RTSPCamera()
 
 # Parque automotor calibrado para Paute, Azuay
 FLEET_CONFIG = {
@@ -1190,6 +1260,39 @@ if HAS_AIOHTTP:
             return web.json_response(cctv_detector.get_stats())
         app.router.add_get("/health", health)
         app.router.add_get("/api/vision/stats", vision_stats)
+
+        async def rtsp_stream(_req):
+            if not rtsp_camera.start():
+                return web.json_response({"error": "Ingresa las credenciales locales de la cámara y verifica OpenCV."}, status=503)
+            response = web.StreamResponse(headers={
+                "Content-Type": "multipart/x-mixed-replace; boundary=frame",
+                "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*"
+            })
+            await response.prepare(_req)
+            try:
+                while True:
+                    frame = rtsp_camera.jpeg()
+                    if frame:
+                        await response.write(b"--frame\r\nContent-Type: image/jpeg\r\nContent-Length: " + str(len(frame)).encode() + b"\r\n\r\n" + frame + b"\r\n")
+                    await asyncio.sleep(0.05)
+            except (ConnectionResetError, asyncio.CancelledError):
+                pass
+            return response
+        app.router.add_get("/api/camera/stream", rtsp_stream)
+        async def configure_camera(req):
+            try:
+                data = await req.json()
+                ip = str(data.get("ip", "192.168.0.11"))
+                username = str(data.get("username", "admin"))
+                password = str(data.get("password", ""))
+                if not ipaddress.ip_address(ip).is_private or not username or not password:
+                    return web.json_response({"error": "Ingresa IP privada, usuario y código de verificación."}, status=400)
+                if not rtsp_camera.configure(ip, username, password):
+                    return web.json_response({"error": "OpenCV no está disponible en el servidor."}, status=503)
+                return web.json_response({"status": "connecting"})
+            except ValueError:
+                return web.json_response({"error": "La dirección IP no es válida."}, status=400)
+        app.router.add_post("/api/camera/config", configure_camera)
         
         async def index(req):
             return web.FileResponse(os.path.join(WEB_DIR, "index.html"))
@@ -1272,6 +1375,34 @@ if HAS_FASTAPI:
     @fastapi_app.get("/api/vision/stats")
     async def api_vision_stats():
         return cctv_detector.get_stats()
+
+    @fastapi_app.get("/api/camera/stream")
+    async def api_camera_stream():
+        from fastapi.responses import StreamingResponse, JSONResponse
+        if not rtsp_camera.start():
+            return JSONResponse({"error": "Ingresa las credenciales locales de la cámara y verifica OpenCV."}, status_code=503)
+        async def frames():
+            while True:
+                frame = rtsp_camera.jpeg()
+                if frame:
+                    yield b"--frame\r\nContent-Type: image/jpeg\r\nContent-Length: " + str(len(frame)).encode() + b"\r\n\r\n" + frame + b"\r\n"
+                await asyncio.sleep(0.05)
+        return StreamingResponse(frames(), media_type="multipart/x-mixed-replace; boundary=frame")
+
+    @fastapi_app.post("/api/camera/config")
+    async def api_camera_config(data: dict):
+        from fastapi.responses import JSONResponse
+        try:
+            ip = str(data.get("ip", "192.168.0.11"))
+            username = str(data.get("username", "admin"))
+            password = str(data.get("password", ""))
+            if not ipaddress.ip_address(ip).is_private or not username or not password:
+                return JSONResponse({"error": "Ingresa IP privada, usuario y código de verificación."}, status_code=400)
+            if not rtsp_camera.configure(ip, username, password):
+                return JSONResponse({"error": "OpenCV no está disponible en el servidor."}, status_code=503)
+            return {"status": "connecting"}
+        except ValueError:
+            return JSONResponse({"error": "La dirección IP no es válida."}, status_code=400)
 
     @fastapi_app.get("/health")
     async def health():

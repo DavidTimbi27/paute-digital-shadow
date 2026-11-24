@@ -91,6 +91,7 @@ const CAMERA_PRESETS = {
 // Variables para Sistema de Cámara USB en Vivo
 let cctvGroup = null;
 let cctvStream = null;
+let cctvRtspTextureCanvas = null;
 let cctvScreenMaterial = null;
 let isCCTVModalOpen = false;
 let cctvFallbackAnimationId = null;
@@ -400,11 +401,15 @@ function cyclePipViewMode(event) {
 function captureCCTVFrame() {
     if (visionFramePending || !cctvStream || !ws || ws.readyState !== WebSocket.OPEN) return;
     const video = getActiveCCTVVideo();
-    if (!video || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || !video.videoWidth) return;
+    if (!video) return;
+    const isImage = video.tagName === 'IMG';
+    const frameWidth = isImage ? video.naturalWidth : video.videoWidth;
+    const frameHeight = isImage ? video.naturalHeight : video.videoHeight;
+    if ((isImage && !video.complete) || (!isImage && video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) || !frameWidth) return;
     if (!visionFrameCanvas) visionFrameCanvas = document.createElement('canvas');
-    const scale = Math.min(1, 640 / video.videoWidth);
-    visionFrameCanvas.width = Math.round(video.videoWidth * scale);
-    visionFrameCanvas.height = Math.round(video.videoHeight * scale);
+    const scale = Math.min(1, 640 / frameWidth);
+    visionFrameCanvas.width = Math.round(frameWidth * scale);
+    visionFrameCanvas.height = Math.round(frameHeight * scale);
     visionFrameCanvas.getContext('2d', { alpha: false }).drawImage(video, 0, 0, visionFrameCanvas.width, visionFrameCanvas.height);
     visionFramePending = true;
     visionFrameTimeoutId = setTimeout(() => {
@@ -420,6 +425,11 @@ function captureCCTVFrame() {
 }
 
 function getActiveCCTVVideo() {
+    if (cctvStream?.kind === 'rtsp') {
+        const image = document.getElementById(isCCTVModalOpen ? 'cctv-modal-network-image' : 'cctv-network-image');
+        if (image?.complete && image.naturalWidth) return image;
+        return document.getElementById('cctv-network-image');
+    }
     const pipVideo = document.getElementById('cctv-video');
     const modalVideo = document.getElementById('cctv-modal-video');
     if (isCCTVModalOpen && modalVideo && modalVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && modalVideo.videoWidth) {
@@ -486,7 +496,9 @@ function updatePipPreview() {
     if (now - lastPipPaintAt < 33) return;
     const source = getActiveCCTVVideo();
     const canvas = document.getElementById('cctv-pip-preview');
-    if (!source || !canvas || source.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || !source.videoWidth) return;
+    const sourceWidth = source?.tagName === 'IMG' ? source.naturalWidth : source?.videoWidth;
+    const sourceHeight = source?.tagName === 'IMG' ? source.naturalHeight : source?.videoHeight;
+    if (!source || !canvas || (!cctvStream || cctvStream.kind !== 'rtsp') && source.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || !sourceWidth) return;
     lastPipPaintAt = now;
     const rect = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
@@ -500,9 +512,10 @@ function updatePipPreview() {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    const drawRect = containedVideoRect(canvas.width, canvas.height, source.videoWidth, source.videoHeight);
+    const drawRect = containedVideoRect(canvas.width, canvas.height, sourceWidth, sourceHeight);
     ctx.drawImage(source, drawRect.x, drawRect.y, drawRect.width, drawRect.height);
     canvas.style.display = 'block';
+    if (cctvRtspTextureCanvas && cctvScreenMaterial?.map) cctvScreenMaterial.map.needsUpdate = true;
     const pipVideo = document.getElementById('cctv-video');
     if (pipVideo) pipVideo.style.display = 'none';
 }
@@ -1405,16 +1418,19 @@ function drawVisionDetections(result) {
     const roiMax = result.roi?.y_max ?? 0.92;
     ['cctv-yolo-canvas', 'cctv-modal-yolo-canvas'].forEach(id => {
         const canvas = document.getElementById(id);
-        const video = id === 'cctv-yolo-canvas'
-            ? document.getElementById('cctv-video') : document.getElementById('cctv-modal-video');
-        if (!canvas || !video || !video.videoWidth || !video.videoHeight) return;
+        const video = cctvStream?.kind === 'rtsp'
+            ? document.getElementById(id === 'cctv-yolo-canvas' ? 'cctv-network-image' : 'cctv-modal-network-image')
+            : document.getElementById(id === 'cctv-yolo-canvas' ? 'cctv-video' : 'cctv-modal-video');
+        const videoWidth = video?.tagName === 'IMG' ? video.naturalWidth : video?.videoWidth;
+        const videoHeight = video?.tagName === 'IMG' ? video.naturalHeight : video?.videoHeight;
+        if (!canvas || !video || !videoWidth || !videoHeight) return;
         syncVisionOverlayCanvas(canvas);
         const rect = canvas.getBoundingClientRect();
         const dpr = window.devicePixelRatio || 1;
         const ctx = canvas.getContext('2d');
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, rect.width, rect.height);
-        const content = containedVideoRect(rect.width, rect.height, video.videoWidth, video.videoHeight);
+        const content = containedVideoRect(rect.width, rect.height, videoWidth, videoHeight);
 
         // Diagnostic roadway ROI, hysteresis band and crossing thresholds.
         const roiTop = content.y + content.height * roiMin;
@@ -1659,13 +1675,75 @@ async function initWebcamSystem() {
 
     // Intentar conexión inicial
     try {
-        await requestWebcamAccess();
+        connectRTSPCamera();
     } catch (e) {
         // Esperará el clic del usuario en el botón "Activar Cámara USB"
     }
 }
 
 // Solicitar acceso a la cámara USB física
+function connectRTSPCamera() {
+    const images = [document.getElementById('cctv-network-image'), document.getElementById('cctv-modal-network-image')];
+    if (images.some(image => !image)) return;
+    cctvStream = { kind: 'rtsp' };
+    ['cctv-video', 'cctv-modal-video'].forEach(id => {
+        const video = document.getElementById(id);
+        if (video) video.style.display = 'none';
+    });
+    images.forEach(image => {
+        image.style.display = 'none';
+        image.onload = () => {
+            image.style.display = 'block';
+            const prompt = document.getElementById('cctv-prompt-overlay');
+            if (prompt) prompt.style.display = 'none';
+        };
+        image.onerror = () => {
+            image.style.display = 'none';
+            const prompt = document.getElementById('cctv-prompt-overlay');
+            if (prompt) prompt.style.display = 'flex';
+        };
+        image.src = `/api/camera/stream?ts=${Date.now()}`;
+    });
+    const preview = document.getElementById('cctv-pip-preview');
+    if (preview && cctvScreenMaterial) {
+        cctvRtspTextureCanvas = preview;
+        cctvScreenMaterial.map = new THREE.CanvasTexture(preview);
+        cctvScreenMaterial.map.colorSpace = THREE.SRGBColorSpace;
+        cctvScreenMaterial.needsUpdate = true;
+    }
+}
+
+async function configureEZVIZCamera(event) {
+    event.preventDefault();
+    const ip = document.getElementById('ezviz-ip').value.trim();
+    const username = document.getElementById('ezviz-user').value.trim();
+    const codeInput = document.getElementById('ezviz-code');
+    const status = document.getElementById('ezviz-connection-status');
+    const button = event.currentTarget.querySelector('button[type="submit"]');
+
+    button.disabled = true;
+    status.textContent = 'Configurando cámara...';
+    try {
+        const response = await fetch('/api/camera/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ip, username, password: codeInput.value })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || 'No se pudo configurar la cámara.');
+        }
+
+        codeInput.value = '';
+        status.textContent = 'Conectando al video...';
+        connectRTSPCamera();
+    } catch (error) {
+        status.textContent = `Error de conexión: ${error.message}`;
+    } finally {
+        button.disabled = false;
+    }
+}
+
 async function requestWebcamAccess(deviceId = null) {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         console.warn('getUserMedia no soportado en este navegador.');
@@ -1673,7 +1751,7 @@ async function requestWebcamAccess(deviceId = null) {
     }
 
     try {
-        if (cctvStream) {
+        if (cctvStream?.getTracks) {
             cctvStream.getTracks().forEach(t => t.stop());
             cctvStream = null;
         }
@@ -1696,9 +1774,12 @@ async function requestWebcamAccess(deviceId = null) {
         // Un solo decodificador activo evita que la c?mara USB quede negra en el PiP.
         const activeVideo = isCCTVModalOpen ? videoModal : videoPip;
         const idleVideo = isCCTVModalOpen ? videoPip : videoModal;
+        [document.getElementById('cctv-network-image'), document.getElementById('cctv-modal-network-image')]
+            .forEach(image => { if (image) image.style.display = 'none'; });
         if (idleVideo) {
             idleVideo.pause();
             idleVideo.srcObject = null;
+            idleVideo.style.display = 'none';
         }
         if (activeVideo) {
             activeVideo.srcObject = stream;
@@ -1776,7 +1857,7 @@ function expandCCTVModal(e) {
 
     const videoPip = document.getElementById('cctv-video');
     const videoModal = document.getElementById('cctv-modal-video');
-    if (videoPip && videoModal && cctvStream) {
+    if (videoPip && videoModal && cctvStream?.getTracks) {
         videoPip.pause();
         videoPip.srcObject = null;
         videoModal.srcObject = cctvStream;
@@ -1793,7 +1874,7 @@ function closeCCTVModal(e) {
     }
     const videoPip = document.getElementById('cctv-video');
     const videoModal = document.getElementById('cctv-modal-video');
-    if (videoModal && videoPip && cctvStream) {
+    if (videoModal && videoPip && cctvStream?.getTracks) {
         videoModal.pause();
         videoModal.srcObject = null;
         videoPip.srcObject = cctvStream;

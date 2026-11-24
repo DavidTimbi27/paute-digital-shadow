@@ -840,12 +840,19 @@ body, html {
 }
 
 .cctv-video-wrapper video,
-.cctv-main-video-container video {
+.cctv-video-wrapper img,
+.cctv-main-video-container video,
+.cctv-main-video-container img {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: contain;
     display: block;
 }
+
+.cctv-video-wrapper img,
+.cctv-main-video-container img { display: none; }
 
 .cctv-fallback-canvas {
     position: absolute;

@@ -16,7 +16,7 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
     
-    <link rel="stylesheet" href="style.css?v=20261117-panels2">
+    <link rel="stylesheet" href="style.css?v=20261124-camera-fit">
 </head>
 <body>
     <div id="canvas-container"></div>
@@ -322,6 +322,7 @@
         <div class="cctv-pip-content pip-dual" id="cctv-pip-content">
             <div class="cctv-pip-pane cctv-pip-physical-pane" id="cctv-pip-physical-pane">
                 <div class="cctv-video-wrapper">
+                    <img id="cctv-network-image" alt="Video RTSP EZVIZ" />
                     <video id="cctv-video" autoplay playsinline muted></video>
                     <canvas id="cctv-fallback-canvas" class="cctv-fallback-canvas"></canvas>
                     <canvas id="cctv-pip-preview" class="cctv-pip-preview"></canvas>
@@ -330,10 +331,18 @@
                         <span class="cctv-badge-loc">SUBE / BAJA E40</span>
                         <span class="cctv-badge-hint" id="pip-flow-badge">SUBE 0 | BAJA 0 | TOTAL 0</span>
                     </div>
-                    <div class="cctv-prompt-overlay" id="cctv-prompt-overlay" onclick="requestWebcamAccess()">
-                        <span class="prompt-icon">CAM</span>
-                        <button class="cctv-start-btn" onclick="requestWebcamAccess()">CONNECT USB CAMERA</button>
-                        <span class="prompt-sub">Click to start live video</span>
+                    <div class="cctv-prompt-overlay" id="cctv-prompt-overlay">
+                        <span class="prompt-icon">EZVIZ IP</span>
+                        <form class="ezviz-credentials-form" onsubmit="configureEZVIZCamera(event)">
+                            <label for="ezviz-ip">IP de la cámara</label>
+                            <input id="ezviz-ip" value="192.168.0.11" autocomplete="off" required>
+                            <label for="ezviz-user">Usuario RTSP</label>
+                            <input id="ezviz-user" value="admin" autocomplete="username" required>
+                            <label for="ezviz-code">Código de verificación</label>
+                            <input id="ezviz-code" type="password" autocomplete="new-password" required>
+                            <button class="cctv-start-btn" type="submit">CONECTAR CÁMARA</button>
+                            <span class="prompt-sub" id="ezviz-connection-status">El código se usa solo en esta sesión local.</span>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -384,6 +393,7 @@
                         <span class="pane-tag hud" id="cctv-hud-fps">30 FPS • YOLOv11 CPU</span>
                     </div>
                     <div class="cctv-main-video-container" id="cctv-main-video-container">
+                        <img id="cctv-modal-network-image" alt="Video RTSP EZVIZ" />
                         <video id="cctv-modal-video" autoplay playsinline muted></video>
                         <canvas id="cctv-modal-canvas" class="cctv-fallback-canvas"></canvas>
                         <canvas id="cctv-modal-yolo-canvas" class="cctv-yolo-overlay"></canvas>
@@ -466,6 +476,6 @@
         <span>🎮 <b>WASD / Flechas:</b> Desplazarse por el mapa | <b>Arrastrar Clic Izq:</b> Orbitar | <b>Clic Der:</b> Paneo | <b>Clic en Vehículo:</b> Ver Telemetría & CO₂</span>
     </div>
 
-    <script src="app.js?v=20261117-panels2"></script>
+    <script src="app.js?v=20261124-camera-fit"></script>
 </body>
 </html>
